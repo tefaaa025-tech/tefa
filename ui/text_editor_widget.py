@@ -2,14 +2,14 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                              QTextEdit, QFileDialog, QMessageBox, QToolBar,
                              QFontComboBox, QSpinBox, QDialog, QLabel,
-                             QDialogButtonBox)  # --- NEW (إضافة QDialog و QLabel و QDialogButtonBox) ---
+                             QDialogButtonBox, QMenu, QDoubleSpinBox, QComboBox)
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QTextCharFormat, QTextCursor, QPageSize, QPageLayout, QTextTableFormat
+from PyQt6.QtGui import QFont, QTextCharFormat, QTextCursor, QPageSize, QPageLayout, QTextTableFormat, QAction
 from PyQt6.QtPrintSupport import QPrinter, QPrintDialog
 from docx import Document
 from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from bs4 import BeautifulSoup  # --- NEW (لمعالجة HTML وتحويل الجداول) ---
+from bs4 import BeautifulSoup
 import os
 
 class TextEditorWidget(QWidget):
@@ -87,6 +87,8 @@ class TextEditorWidget(QWidget):
         # Text editor
         self.text_edit = QTextEdit()
         self.text_edit.setFont(QFont('Arial', 12))
+        self.text_edit.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.text_edit.customContextMenuRequested.connect(self.show_context_menu)
         layout.addWidget(self.text_edit)
         
         # Action buttons
@@ -116,6 +118,10 @@ class TextEditorWidget(QWidget):
         insert_table_btn = QPushButton('📊 إدراج جدول')
         insert_table_btn.clicked.connect(self.insert_table)
         btn_layout.addWidget(insert_table_btn)
+        
+        edit_table_btn = QPushButton('✏️ تحرير جدول')
+        edit_table_btn.clicked.connect(self.edit_current_table)
+        btn_layout.addWidget(edit_table_btn)
         
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
@@ -341,3 +347,167 @@ class TextEditorWidget(QWidget):
                 QMessageBox.information(self, 'نجح', 'تم الطباعة بنجاح')
         except Exception as e:
             QMessageBox.critical(self, 'خطأ', f'حدث خطأ أثناء الطباعة:\n{str(e)}')
+    
+    def show_context_menu(self, position):
+        cursor = self.text_edit.cursorForPosition(position)
+        table = cursor.currentTable()
+        
+        menu = QMenu(self)
+        
+        if table:
+            add_row_action = QAction('إضافة صف', self)
+            add_row_action.triggered.connect(lambda: self.add_table_row(table, cursor))
+            menu.addAction(add_row_action)
+            
+            remove_row_action = QAction('حذف صف', self)
+            remove_row_action.triggered.connect(lambda: self.remove_table_row(table, cursor))
+            menu.addAction(remove_row_action)
+            
+            menu.addSeparator()
+            
+            add_col_action = QAction('إضافة عمود', self)
+            add_col_action.triggered.connect(lambda: self.add_table_column(table, cursor))
+            menu.addAction(add_col_action)
+            
+            remove_col_action = QAction('حذف عمود', self)
+            remove_col_action.triggered.connect(lambda: self.remove_table_column(table, cursor))
+            menu.addAction(remove_col_action)
+            
+            menu.addSeparator()
+            
+            edit_table_action = QAction('تحرير خصائص الجدول', self)
+            edit_table_action.triggered.connect(lambda: self.edit_table_properties(table))
+            menu.addAction(edit_table_action)
+        else:
+            default_action = QAction('لا يوجد جدول في موضع المؤشر', self)
+            default_action.setEnabled(False)
+            menu.addAction(default_action)
+        
+        menu.exec(self.text_edit.mapToGlobal(position))
+    
+    def add_table_row(self, table, cursor):
+        cell = table.cellAt(cursor)
+        row = cell.row()
+        table.insertRows(row + 1, 1)
+        QMessageBox.information(self, 'نجح', 'تم إضافة صف جديد')
+    
+    def remove_table_row(self, table, cursor):
+        if table.rows() <= 1:
+            QMessageBox.warning(self, 'تحذير', 'لا يمكن حذف الصف الوحيد في الجدول')
+            return
+        
+        cell = table.cellAt(cursor)
+        row = cell.row()
+        table.removeRows(row, 1)
+        QMessageBox.information(self, 'نجح', 'تم حذف الصف')
+    
+    def add_table_column(self, table, cursor):
+        cell = table.cellAt(cursor)
+        col = cell.column()
+        table.insertColumns(col + 1, 1)
+        QMessageBox.information(self, 'نجح', 'تم إضافة عمود جديد')
+    
+    def remove_table_column(self, table, cursor):
+        if table.columns() <= 1:
+            QMessageBox.warning(self, 'تحذير', 'لا يمكن حذف العمود الوحيد في الجدول')
+            return
+        
+        cell = table.cellAt(cursor)
+        col = cell.column()
+        table.removeColumns(col, 1)
+        QMessageBox.information(self, 'نجح', 'تم حذف العمود')
+    
+    def edit_table_properties(self, table):
+        dialog = QDialog(self)
+        dialog.setWindowTitle('تحرير خصائص الجدول')
+        dialog.setFixedWidth(400)
+        
+        layout = QVBoxLayout()
+        
+        border_layout = QHBoxLayout()
+        border_layout.addWidget(QLabel('نمط الإطار:'))
+        border_style_combo = QComboBox()
+        border_style_combo.addItems(['بدون إطار', 'خط مفرد', 'خط مزدوج', 'خط منقط', 'خط متقطع'])
+        border_layout.addWidget(border_style_combo)
+        layout.addLayout(border_layout)
+        
+        current_format = table.format()
+        current_border = current_format.borderStyle()
+        
+        if current_border == QTextTableFormat.BorderStyle.BorderStyle_None:
+            border_style_combo.setCurrentIndex(0)
+        elif current_border == QTextTableFormat.BorderStyle.BorderStyle_Solid:
+            border_style_combo.setCurrentIndex(1)
+        elif current_border == QTextTableFormat.BorderStyle.BorderStyle_Double:
+            border_style_combo.setCurrentIndex(2)
+        elif current_border == QTextTableFormat.BorderStyle.BorderStyle_Dotted:
+            border_style_combo.setCurrentIndex(3)
+        elif current_border == QTextTableFormat.BorderStyle.BorderStyle_Dashed:
+            border_style_combo.setCurrentIndex(4)
+        
+        width_layout = QHBoxLayout()
+        width_layout.addWidget(QLabel('عرض الإطار:'))
+        border_width_spin = QDoubleSpinBox()
+        border_width_spin.setMinimum(0)
+        border_width_spin.setMaximum(10)
+        border_width_spin.setValue(current_format.border())
+        border_width_spin.setSingleStep(0.5)
+        width_layout.addWidget(border_width_spin)
+        layout.addLayout(width_layout)
+        
+        padding_layout = QHBoxLayout()
+        padding_layout.addWidget(QLabel('المسافة الداخلية للخلايا:'))
+        cell_padding_spin = QDoubleSpinBox()
+        cell_padding_spin.setMinimum(0)
+        cell_padding_spin.setMaximum(20)
+        cell_padding_spin.setValue(current_format.cellPadding())
+        cell_padding_spin.setSingleStep(1)
+        padding_layout.addWidget(cell_padding_spin)
+        layout.addLayout(padding_layout)
+        
+        spacing_layout = QHBoxLayout()
+        spacing_layout.addWidget(QLabel('المسافة بين الخلايا:'))
+        cell_spacing_spin = QDoubleSpinBox()
+        cell_spacing_spin.setMinimum(0)
+        cell_spacing_spin.setMaximum(20)
+        cell_spacing_spin.setValue(current_format.cellSpacing())
+        cell_spacing_spin.setSingleStep(1)
+        spacing_layout.addWidget(cell_spacing_spin)
+        layout.addLayout(spacing_layout)
+        
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | 
+            QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        
+        dialog.setLayout(layout)
+        
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            new_format = QTextTableFormat()
+            
+            border_styles = [
+                QTextTableFormat.BorderStyle.BorderStyle_None,
+                QTextTableFormat.BorderStyle.BorderStyle_Solid,
+                QTextTableFormat.BorderStyle.BorderStyle_Double,
+                QTextTableFormat.BorderStyle.BorderStyle_Dotted,
+                QTextTableFormat.BorderStyle.BorderStyle_Dashed
+            ]
+            new_format.setBorderStyle(border_styles[border_style_combo.currentIndex()])
+            new_format.setBorder(border_width_spin.value())
+            new_format.setCellPadding(cell_padding_spin.value())
+            new_format.setCellSpacing(cell_spacing_spin.value())
+            
+            table.setFormat(new_format)
+            QMessageBox.information(self, 'نجح', 'تم تحديث خصائص الجدول بنجاح')
+    
+    def edit_current_table(self):
+        cursor = self.text_edit.textCursor()
+        table = cursor.currentTable()
+        
+        if table:
+            self.edit_table_properties(table)
+        else:
+            QMessageBox.warning(self, 'تحذير', 'الرجاء وضع المؤشر داخل الجدول المراد تحريره')
