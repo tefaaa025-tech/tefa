@@ -58,10 +58,11 @@ class AddExpenseDialog(QDialog):
         }
 
 class ExpensesWidget(QWidget):
-    def __init__(self, db, expense_mgr):
+    def __init__(self, db, expense_mgr, current_user=None):  # --- NEW FEATURE: User Permissions ---
         super().__init__()
         self.db = db
         self.expense_mgr = expense_mgr
+        self.current_user = current_user  # --- NEW FEATURE: User Permissions ---
         self.setup_ui()
     
     def setup_ui(self):

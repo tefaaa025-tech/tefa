@@ -34,7 +34,8 @@ class CalculatorWidget(QWidget):
         
         self.display = QLineEdit()
         self.display.setText("0")
-        self.display.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.display.setAlignment(Qt.AlignmentFlag.AlignLeft)  # --- NEW FEATURE: LTR for numbers ---
+        self.display.setLayoutDirection(Qt.LayoutDirection.LeftToRight)  # --- NEW FEATURE: LTR for numbers ---
         self.display.setReadOnly(True)
         self.display.setFont(QFont('Arial', 28, QFont.Weight.Bold))
         self.display.setStyleSheet('''
@@ -52,12 +53,12 @@ class CalculatorWidget(QWidget):
         buttons_layout = QGridLayout()
         buttons_layout.setSpacing(8)
         
+        # --- NEW FEATURE: New button layout as requested ---
         buttons = [
-            ['C', '⌫', '%', '/'],
-            ['7', '8', '9', '×'],
-            ['4', '5', '6', '-'],
-            ['1', '2', '3', '+'],
-            ['±', '0', '.', '=']
+            ['7', '8', '9'],
+            ['4', '5', '6'],
+            ['1', '2', '3'],
+            ['0', '.', '=']
         ]
         
         for row_idx, row in enumerate(buttons):
@@ -66,22 +67,8 @@ class CalculatorWidget(QWidget):
                 btn.setFont(QFont('Arial', 16, QFont.Weight.Bold))
                 btn.setMinimumHeight(60)
                 
-                if button_text in ['C', '⌫']:
-                    btn.setStyleSheet('''
-                        QPushButton {
-                            background-color: #e74c3c;
-                            color: white;
-                            border-radius: 8px;
-                            border: none;
-                        }
-                        QPushButton:hover {
-                            background-color: #c0392b;
-                        }
-                        QPushButton:pressed {
-                            background-color: #a93226;
-                        }
-                    ''')
-                elif button_text in ['/', '×', '-', '+', '=']:
+                # --- NEW FEATURE: Simplified button styling ---
+                if button_text == '=':
                     btn.setStyleSheet('''
                         QPushButton {
                             background-color: #667eea;
@@ -94,21 +81,6 @@ class CalculatorWidget(QWidget):
                         }
                         QPushButton:pressed {
                             background-color: #4453c8;
-                        }
-                    ''')
-                elif button_text in ['%', '±']:
-                    btn.setStyleSheet('''
-                        QPushButton {
-                            background-color: #95a5a6;
-                            color: white;
-                            border-radius: 8px;
-                            border: none;
-                        }
-                        QPushButton:hover {
-                            background-color: #7f8c8d;
-                        }
-                        QPushButton:pressed {
-                            background-color: #6c7a7b;
                         }
                     ''')
                 else:

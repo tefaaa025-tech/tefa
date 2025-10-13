@@ -59,11 +59,12 @@ class AddPaymentDialog(QDialog):
         }
 
 class PaymentsWidget(QWidget):
-    def __init__(self, db, payment_mgr, patient_mgr):
+    def __init__(self, db, payment_mgr, patient_mgr, current_user=None):  # --- NEW FEATURE: User Permissions ---
         super().__init__()
         self.db = db
         self.payment_mgr = payment_mgr
         self.patient_mgr = patient_mgr
+        self.current_user = current_user  # --- NEW FEATURE: User Permissions ---
         self.setup_ui()
     
     def setup_ui(self):

@@ -112,16 +112,85 @@ class CigarettesWidget(QWidget):
                 QMessageBox.warning(self, 'خطأ', 'السعر يجب أن يكون أكبر من صفر')
                 return
             
-            query = '''
-                UPDATE settings 
-                SET setting_value = ?, updated_at = ?
-                WHERE setting_key = 'cigarette_pack_price'
+            # --- NEW FEATURE: Show impact of price change ---
+            old_price = self.get_cigarette_price()
+            
+            # Calculate affected patients and financial impact
+            affected_patients_query = '''
+                SELECT COUNT(*), SUM(cigarettes_count) 
+                FROM patients 
+                WHERE status = 'نشط' AND receives_cigarettes = 1
             '''
-            self.db.execute(query, (str(new_price), datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-            QMessageBox.information(self, 'نجح', 'تم حفظ السعر بنجاح')
-            self.load_cigarettes_data()
+            result = self.db.fetchone(affected_patients_query)
+            affected_count = result[0] if result else 0
+            total_daily_cigarettes = result[1] if result and result[1] else 0
+            
+            # Calculate daily financial difference
+            old_daily_cost = (total_daily_cigarettes / 20) * old_price
+            new_daily_cost = (total_daily_cigarettes / 20) * new_price
+            daily_difference = new_daily_cost - old_daily_cost
+            
+            # Show confirmation dialog
+            price_change = new_price - old_price
+            confirmation_msg = f'''
+            <div style="text-align: right; direction: rtl;">
+            <h3>تأكيد تغيير سعر السجائر</h3>
+            <p><b>السعر القديم:</b> {old_price:.2f} جنيه</p>
+            <p><b>السعر الجديد:</b> {new_price:.2f} جنيه</p>
+            <p><b>الفرق:</b> {price_change:+.2f} جنيه</p>
+            <br>
+            <p><b>عدد المرضى المتأثرين:</b> {affected_count} مريض</p>
+            <p><b>إجمالي السجائر اليومية:</b> {total_daily_cigarettes} سيجارة</p>
+            <p><b>الفرق في التكلفة اليومية:</b> {daily_difference:+.2f} جنيه</p>
+            <br>
+            <p>⚠️ سيؤثر هذا التغيير على حساب تكلفة السجائر في كشوف حساب جميع المرضى الحاليين والمستقبليين.</p>
+            <p>هل أنت متأكد من التغيير؟</p>
+            </div>
+            '''
+            
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle('تأكيد تغيير السعر')
+            msg_box.setText(confirmation_msg)
+            msg_box.setTextFormat(Qt.TextFormat.RichText)
+            msg_box.setStandardButtons(
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+            
+            if msg_box.exec() == QMessageBox.StandardButton.Yes:
+                # Update the price
+                query = '''
+                    UPDATE settings 
+                    SET setting_value = ?, updated_at = ?
+                    WHERE setting_key = 'cigarette_pack_price'
+                '''
+                self.db.execute(query, (str(new_price), datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                
+                # Log the price change
+                self.log_price_change(old_price, new_price, affected_count, daily_difference)
+                
+                QMessageBox.information(self, 'نجح', 'تم حفظ السعر بنجاح وتسجيل التغيير')
+                self.load_cigarettes_data()
+            
         except ValueError:
             QMessageBox.warning(self, 'خطأ', 'الرجاء إدخال سعر صحيح')
+    
+    def log_price_change(self, old_price, new_price, affected_patients, daily_difference):
+        # --- NEW FEATURE: Log price changes ---
+        try:
+            log_file = 'cigarette_price_log.txt'
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
+            with open(log_file, 'a', encoding='utf-8') as f:
+                f.write(f'\n=== تغيير سعر السجائر - {timestamp} ===\n')
+                f.write(f'السعر القديم: {old_price:.2f} جنيه\n')
+                f.write(f'السعر الجديد: {new_price:.2f} جنيه\n')
+                f.write(f'الفرق: {(new_price - old_price):+.2f} جنيه\n')
+                f.write(f'عدد المرضى المتأثرين: {affected_patients}\n')
+                f.write(f'الفرق في التكلفة اليومية: {daily_difference:+.2f} جنيه\n')
+                f.write('=' * 60 + '\n')
+        except Exception as e:
+            print(f'فشل تسجيل تغيير السعر: {str(e)}')
     
     def load_cigarettes_data(self):
         query = '''

@@ -4,12 +4,72 @@
 
 ## Recent Updates (October 2025)
 
+### NEW FEATURES (Latest Update)
+
+#### 1. Excel Import for Patients
+- **Import Widget** (`ui/import_patients_widget.py`): New dedicated page for importing patients from Excel files
+- **Features**:
+  - Uses openpyxl/pandas for Excel file reading
+  - Preview window showing valid and invalid records with error details
+  - Batch insertion to database (50 records per batch)
+  - Operation logging to `import_log.txt`
+  - Safe error handling with try/except blocks
+  - No impact on existing patient tables or interfaces
+
+#### 2. User Permissions System
+- **Role-Based Access Control**: Implemented permission checks based on user role
+- **Two User Types**:
+  - **Admin**: Full access (add, edit, delete, discharge)
+  - **User**: Add-only access (cannot edit or delete)
+- **Permission Enforcement**:
+  - Protection in PatientsWidget for edit, delete, and discharge operations
+  - Warning message: "⚠️ غير مصرح لك بتعديل أو حذف البيانات"
+  - Backend validation prevents unauthorized operations even via shortcuts
+- **Note**: PaymentsWidget, ExpensesWidget, and EmployeesWidget only support adding records (no edit/delete functionality), so they're automatically compliant
+
+#### 3. Calculator Redesign
+- **New Button Layout** (Left to Right):
+  ```
+  7 8 9
+  4 5 6
+  1 2 3
+  0 . =
+  ```
+- **LTR Display**: Numbers displayed left-to-right for better readability
+- **Simplified Design**: Removed extra operations, kept core functionality
+- **No Logic Changes**: Mathematical operations work exactly as before
+
+#### 4. Text Editor Widget
+- **Professional Text Editor** (`ui/text_editor_widget.py`)
+- **Features**:
+  - Text formatting: Bold, Italic, Underline
+  - Alignment: Left, Center, Right
+  - Font selection and size control
+  - Save as .txt or .docx files
+  - Open previously saved files
+  - Direct printing support
+  - RTL support for Arabic text in Word documents
+
+#### 5. Cigarette Price Update System
+- **Impact Preview**: Shows confirmation dialog before price change with:
+  - Old price vs new price comparison
+  - Number of affected patients
+  - Daily financial impact calculation
+- **Automatic Recalculation**: Patient statements use new price immediately (calculated dynamically)
+- **Change Logging**: All price changes logged to `cigarette_price_log.txt` with:
+  - Timestamp
+  - Old and new prices
+  - Number of affected patients
+  - Financial impact details
+- **Important**: Patient statement costs are calculated on-demand, not stored. When price changes, all future calculations automatically use the new price.
+
 ### Authentication & Security
 - **Bcrypt Password Hashing**: Implemented secure password storage using bcrypt encryption
 - **New Users Created**: 
   - Admin user (username: admin, password: 1231)
   - Accountant user (username: user, password: 1)
 - **Auth Module**: Created dedicated authentication manager (`modules/auth.py`) for user management
+- **Permission System**: Role-based access control for sensitive operations
 
 ### UI/UX Enhancements
 - **Bold Fonts**: Applied bold font styling (QFont.Weight.Bold) application-wide for better readability

@@ -454,11 +454,12 @@ class PatientStatementDialog(QDialog):
             QMessageBox.critical(self, 'خطأ', f'حدث خطأ أثناء إنشاء الكشف:\n{str(e)}')
 
 class PatientsWidget(QWidget):
-    def __init__(self, db, patient_mgr, payment_mgr):
+    def __init__(self, db, patient_mgr, payment_mgr, current_user=None):  # --- NEW FEATURE: User Permissions ---
         super().__init__()
         self.db = db
         self.patient_mgr = patient_mgr
         self.payment_mgr = payment_mgr
+        self.current_user = current_user  # --- NEW FEATURE: User Permissions ---
         self.setup_ui()
     
     def setup_ui(self):
@@ -629,6 +630,11 @@ class PatientsWidget(QWidget):
                     self.table.setRowHidden(row, True)
     
     def edit_patient(self, patient_id):
+        # --- NEW FEATURE: Check user permissions ---
+        if self.current_user and self.current_user.get('role') != 'admin':
+            QMessageBox.warning(self, 'تحذير', '⚠️ غير مصرح لك بتعديل أو حذف البيانات.')
+            return
+        
         patient = self.patient_mgr.get_patient(patient_id)
         if not patient:
             return
@@ -654,6 +660,11 @@ class PatientsWidget(QWidget):
             self.load_patients()
     
     def delete_patient(self, patient_id):
+        # --- NEW FEATURE: Check user permissions ---
+        if self.current_user and self.current_user.get('role') != 'admin':
+            QMessageBox.warning(self, 'تحذير', '⚠️ غير مصرح لك بتعديل أو حذف البيانات.')
+            return
+        
         reply = QMessageBox.question(
             self, 'تأكيد الحذف',
             'هل أنت متأكد من حذف السجل نهائياً؟ هذا الإجراء لا يمكن التراجع عنه.',
@@ -668,6 +679,11 @@ class PatientsWidget(QWidget):
                 QMessageBox.critical(self, 'خطأ', f'حدث خطأ أثناء الحذف:\n{str(e)}')
     
     def discharge_patient(self, patient_id):
+        # --- NEW FEATURE: Check user permissions ---
+        if self.current_user and self.current_user.get('role') != 'admin':
+            QMessageBox.warning(self, 'تحذير', '⚠️ غير مصرح لك بتعديل أو حذف البيانات.')
+            return
+        
         reply = QMessageBox.question(
             self, 'تأكيد التخريج',
             'هل أنت متأكد من تخريج هذا المريض؟',

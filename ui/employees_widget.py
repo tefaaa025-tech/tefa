@@ -463,10 +463,11 @@ class EmployeeDetailsDialog(QDialog):
             QMessageBox.critical(self, 'خطأ', f'حدث خطأ أثناء إنشاء الكشف:\n{str(e)}')
 
 class EmployeesWidget(QWidget):
-    def __init__(self, db, employee_mgr):
+    def __init__(self, db, employee_mgr, current_user=None):  # --- NEW FEATURE: User Permissions ---
         super().__init__()
         self.db = db
         self.employee_mgr = employee_mgr
+        self.current_user = current_user  # --- NEW FEATURE: User Permissions ---
         self.setup_ui()
     
     def setup_ui(self):

@@ -26,6 +26,8 @@ from ui.employees_widget import EmployeesWidget
 from ui.cigarettes_widget import CigarettesWidget
 from ui.settings_widget import SettingsWidget
 from ui.calculator_widget import CalculatorWidget
+from ui.import_patients_widget import ImportPatientsWidget  # --- NEW FEATURE ---
+from ui.text_editor_widget import TextEditorWidget  # --- NEW FEATURE ---
 
 class LoginWindow(QWidget):
     def __init__(self, main_app):
@@ -91,8 +93,9 @@ class LoginWindow(QWidget):
             QMessageBox.warning(self, 'خطأ', 'اسم المستخدم أو كلمة المرور غير صحيحة')
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, current_user=None):  # --- NEW FEATURE: User Permissions ---
         super().__init__()
+        self.current_user = current_user  # --- NEW FEATURE: User Permissions ---
         self.db = Database('dar_alhayat_accounting/db/dar_alhayat.db')
         self.patient_mgr = PatientManager(self.db)
         self.payment_mgr = PaymentManager(self.db)
@@ -120,11 +123,14 @@ class MainWindow(QMainWindow):
         self.dashboard = DashboardWidget(self.db, self.patient_mgr, 
                                         self.payment_mgr, self.expense_mgr, 
                                         self.employee_mgr)
-        self.patients_widget = PatientsWidget(self.db, self.patient_mgr, self.payment_mgr)
-        self.payments_widget = PaymentsWidget(self.db, self.payment_mgr, self.patient_mgr)
-        self.expenses_widget = ExpensesWidget(self.db, self.expense_mgr)
-        self.employees_widget = EmployeesWidget(self.db, self.employee_mgr)
+        # --- NEW FEATURE: Pass current_user to widgets for permission checks ---
+        self.patients_widget = PatientsWidget(self.db, self.patient_mgr, self.payment_mgr, self.current_user)
+        self.payments_widget = PaymentsWidget(self.db, self.payment_mgr, self.patient_mgr, self.current_user)
+        self.expenses_widget = ExpensesWidget(self.db, self.expense_mgr, self.current_user)
+        self.employees_widget = EmployeesWidget(self.db, self.employee_mgr, self.current_user)
         self.cigarettes_widget = CigarettesWidget(self.db, self.patient_mgr)
+        self.import_patients_widget = ImportPatientsWidget(self.db, self.patient_mgr)  # --- NEW FEATURE ---
+        self.text_editor_widget = TextEditorWidget()  # --- NEW FEATURE ---
         self.calculator_widget = CalculatorWidget()
         self.settings_widget = SettingsWidget(self.db)
         self.settings_widget.theme_changed.connect(self.change_theme)
@@ -135,6 +141,8 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(self.expenses_widget)
         self.stacked_widget.addWidget(self.employees_widget)
         self.stacked_widget.addWidget(self.cigarettes_widget)
+        self.stacked_widget.addWidget(self.import_patients_widget)  # --- NEW FEATURE ---
+        self.stacked_widget.addWidget(self.text_editor_widget)  # --- NEW FEATURE ---
         self.stacked_widget.addWidget(self.calculator_widget)
         self.stacked_widget.addWidget(self.settings_widget)
         
@@ -186,8 +194,10 @@ class MainWindow(QMainWindow):
             ('📊 المصروفات', 3),
             ('👔 الموظفين', 4),
             ('🚬 السجائر', 5),
-            ('🔢 آلة حاسبة', 6),
-            ('⚙️ الإعدادات', 7),
+            ('📥 استيراد من Excel', 6),  # --- NEW FEATURE ---
+            ('📝 محرر النصوص', 7),  # --- NEW FEATURE ---
+            ('🔢 آلة حاسبة', 8),
+            ('⚙️ الإعدادات', 9),
         ]
         
         for text, index in buttons:
@@ -456,7 +466,7 @@ class Application(QApplication):
         self.login_window.show()
     
     def show_main_window(self):
-        self.main_window = MainWindow()
+        self.main_window = MainWindow(self.current_user)  # --- NEW FEATURE: User Permissions ---
         self.main_window.show()
 
 if __name__ == '__main__':
