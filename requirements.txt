@@ -1,5 +1,5 @@
-PyQt6==6.6.1
-PyQt6-sip==13.6.0
+PyQt6>=6.7.0
+PyQt6-sip>=13.6.0
 sqlalchemy==2.0.23
 matplotlib==3.8.2
 reportlab==4.0.7
@@ -9,14 +9,3 @@ arabic-reshaper==3.0.0
 python-bidi==0.4.2
 qdarkstyle==3.2.3
 bcrypt
-arabic-reshaper==3.0.0
-bcrypt
-matplotlib==3.8.2
-openpyxl==3.1.2
-pandas==2.1.4
-PyQt6==6.6.1
-PyQt6-sip==13.6.0
-python-bidi==0.4.2
-qdarkstyle==3.2.3
-reportlab==4.0.7
-sqlalchemy==2.0.23

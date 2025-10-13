@@ -4,4 +4,27 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["cairo", "cargo", "ffmpeg-full", "freetype", "ghostscript", "glibcLocales", "gobject-introspection", "gtk3", "libiconv", "pkg-config", "qhull", "rustc", "tcl", "tk"]
+packages = ["cairo", "cargo", "ffmpeg-full", "freetype", "ghostscript", "glibcLocales", "gobject-introspection", "gtk3", "libGL", "libGLU", "libiconv", "libxkbcommon", "pkg-config", "qhull", "rustc", "tcl", "tk", "xorg.libxcb", "xorg.xcbutilcursor", "xorg.xorgserver", "xorg.xf86videodummy"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "PyQt App"
+
+[[workflows.workflow]]
+name = "PyQt App"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "vnc"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "Xvfb :99 -screen 0 1280x720x24 & sleep 2 && DISPLAY=:99 python main.py"

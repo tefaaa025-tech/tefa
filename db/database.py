@@ -120,6 +120,24 @@ class Database:
                 VALUES ('cigarette_pack_price', '40')
             ''')
         
+        self.cursor.execute('''
+            SELECT COUNT(*) FROM settings WHERE setting_key = 'cigarette_box_cost'
+        ''')
+        if self.cursor.fetchone()[0] == 0:
+            self.cursor.execute('''
+                INSERT INTO settings (setting_key, setting_value)
+                VALUES ('cigarette_box_cost', '40')
+            ''')
+        
+        self.cursor.execute('''
+            SELECT COUNT(*) FROM settings WHERE setting_key = 'cigarettes_per_box'
+        ''')
+        if self.cursor.fetchone()[0] == 0:
+            self.cursor.execute('''
+                INSERT INTO settings (setting_key, setting_value)
+                VALUES ('cigarettes_per_box', '20')
+            ''')
+        
         self.conn.commit()
     
     def execute(self, query, params=()):

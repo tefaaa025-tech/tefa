@@ -17,6 +17,7 @@ from modules.patients import PatientManager
 from modules.payments import PaymentManager
 from modules.expenses import ExpenseManager
 from modules.employees import EmployeeManager
+from modules.auth import AuthManager
 from ui.dashboard import DashboardWidget
 from ui.patients_widget import PatientsWidget
 from ui.payments_widget import PaymentsWidget
@@ -79,7 +80,11 @@ class LoginWindow(QWidget):
         username = self.username.text()
         password = self.password.text()
         
-        if username == 'admin' and password == 'admin123':
+        auth_mgr = AuthManager(self.main_app.db)
+        user = auth_mgr.authenticate(username, password)
+        
+        if user:
+            self.main_app.current_user = user
             self.main_app.show_main_window()
             self.close()
         else:
@@ -433,8 +438,17 @@ class Application(QApplication):
     def __init__(self):
         super().__init__(sys.argv)
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        
+        default_font = QFont("Arial", 12, QFont.Weight.Bold)
+        self.setFont(default_font)
+        
         self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         
+        self.db = Database('dar_alhayat_accounting/db/dar_alhayat.db')
+        auth_mgr = AuthManager(self.db)
+        auth_mgr.initialize_default_users()
+        
+        self.current_user = None
         self.login_window = LoginWindow(self)
         self.main_window = None
     

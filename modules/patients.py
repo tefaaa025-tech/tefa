@@ -108,10 +108,16 @@ class PatientManager:
         
         cigarettes_cost = 0
         if patient[6]:
-            cigarette_price_query = "SELECT setting_value FROM settings WHERE setting_key = 'cigarette_pack_price'"
-            price_result = self.db.fetchone(cigarette_price_query)
-            cigarette_price = float(price_result[0]) if price_result else 40
-            cigarettes_cost = days * patient[7] * cigarette_price
+            box_cost_query = "SELECT setting_value FROM settings WHERE setting_key = 'cigarette_box_cost'"
+            box_cost_result = self.db.fetchone(box_cost_query)
+            cigarette_box_cost = float(box_cost_result[0]) if box_cost_result else 40
+            
+            per_box_query = "SELECT setting_value FROM settings WHERE setting_key = 'cigarettes_per_box'"
+            per_box_result = self.db.fetchone(per_box_query)
+            cigarettes_per_box = float(per_box_result[0]) if per_box_result else 20
+            
+            cigarettes_per_day = patient[7]
+            cigarettes_cost = cigarettes_per_day * days * (cigarette_box_cost / cigarettes_per_box)
         
         total_expenses = accommodation_cost + cigarettes_cost
         balance = total_expenses - total_paid
