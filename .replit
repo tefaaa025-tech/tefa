@@ -4,7 +4,7 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["cairo", "cargo", "ffmpeg-full", "freetype", "ghostscript", "glibcLocales", "gobject-introspection", "gtk3", "libGL", "libGLU", "libiconv", "libxkbcommon", "pkg-config", "qhull", "rustc", "tcl", "tk", "xorg.libxcb", "xorg.xcbutilcursor", "xorg.xorgserver", "xorg.xf86videodummy"]
+packages = ["cairo", "cargo", "ffmpeg-full", "freetype", "ghostscript", "glibcLocales", "gobject-introspection", "gtk3", "libGL", "libGLU", "libiconv", "libxkbcommon", "pkg-config", "qhull", "rustc", "tcl", "tk", "xorg.libxcb", "xorg.xcbutilcursor", "xorg.xf86videodummy", "xorg.xorgserver"]
 
 [workflows]
 runButton = "Project"
