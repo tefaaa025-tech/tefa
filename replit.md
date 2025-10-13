@@ -4,9 +4,32 @@
 
 ## Recent Updates (October 2025)
 
-### NEW FEATURES (Latest Update)
+### NEW FEATURES (Latest Update - October 13, 2025)
 
-#### 1. Excel Import for Patients
+#### 1. Unified Cigarette Pricing System
+- **Single Price Source**: All cigarette cost calculations now use the unified `cigarette_pack_price` setting
+- **Automatic Application**: Price changes from the cigarettes page immediately affect all patient statements
+- **Consistent Calculations**: Both cigarettes dashboard and patient account statements use the same formula: `(cigarettes_per_day / 20) * days * cigarette_pack_price`
+- **Impact Preview**: Confirmation dialog shows affected patients and financial impact before price changes
+- **Audit Logging**: All price changes are logged to `audit_log` table with timestamp and user information
+
+#### 2. Enhanced Table Editing in Text Editor
+- **Context Menu**: Right-click on any table to access editing options
+- **Row Operations**:
+  - Add row: Inserts new row after current position
+  - Remove row: Deletes current row (with protection against removing last row)
+- **Column Operations**:
+  - Add column: Inserts new column after current position
+  - Remove column: Deletes current column (with protection against removing last column)
+- **Table Properties Editor**:
+  - Border style: Choose from None, Solid, Double, Dotted, or Dashed
+  - Border width: Adjustable from 0 to 10 pixels
+  - Cell padding: Control internal spacing (0-20 pixels)
+  - Cell spacing: Control spacing between cells (0-20 pixels)
+- **Quick Access**: Toolbar button "✏️ تحرير جدول" for direct table editing
+- **Word Export**: Table formatting preserved when saving as .docx
+
+#### 3. Excel Import for Patients
 - **Import Widget** (`ui/import_patients_widget.py`): New dedicated page for importing patients from Excel files
 - **Features**:
   - Uses openpyxl/pandas for Excel file reading
@@ -86,10 +109,10 @@
 - **Delete Patient**: Confirmation dialog before permanent deletion
 - **Discharge Patient**: One-click patient discharge with automatic status update
 
-### Cigarette Cost Calculation Fix
-- **Accurate Formula**: Updated cigarette cost calculation to use `cigarettes_per_day * days * (cigarette_box_cost / cigarettes_per_box)`
-- **New Settings**: Added `cigarette_box_cost` and `cigarettes_per_box` to settings table
-- **Per-Patient Pricing**: System supports patient-specific cigarette pricing (priority over global settings)
+### Cigarette Cost Calculation
+- **Unified Pricing**: All cigarette cost calculations use the single `cigarette_pack_price` setting from the cigarettes page
+- **Formula**: `(cigarettes_per_day / 20) * days * cigarette_pack_price`
+- **Dynamic Calculation**: Patient statement costs are calculated on-demand, ensuring price changes apply immediately to all patients
 
 ### Database Management
 - **Import Functionality**: Added database import feature with automatic backup and cleanup
