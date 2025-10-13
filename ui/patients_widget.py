@@ -469,6 +469,16 @@ class PatientsWidget(QWidget):
         header.setStyleSheet('color: #1abc9c; padding: 20px;')
         layout.addWidget(header, alignment=Qt.AlignmentFlag.AlignRight)
         
+        search_layout = QHBoxLayout()
+        search_label = QLabel('🔍 بحث:')
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText('ابحث بالاسم أو الهاتف...')
+        self.search_input.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.search_input.textChanged.connect(self.search_patients)
+        search_layout.addWidget(self.search_input)
+        search_layout.addWidget(search_label)
+        layout.addLayout(search_layout)
+        
         btn_layout = QHBoxLayout()
         
         add_btn = QPushButton('➕ إضافة مريض جديد')
@@ -479,21 +489,41 @@ class PatientsWidget(QWidget):
         refresh_btn.clicked.connect(self.load_patients)
         btn_layout.addWidget(refresh_btn)
         
-        filter_combo = QComboBox()
-        filter_combo.addItems(['الكل', 'النشطون', 'الخريجون'])
-        filter_combo.currentTextChanged.connect(self.filter_patients)
-        btn_layout.addWidget(filter_combo)
+        autofit_btn = QPushButton('📏 Auto-fit')
+        autofit_btn.clicked.connect(lambda: self.table.resizeColumnsToContents())
+        btn_layout.addWidget(autofit_btn)
+        
+        self.filter_combo = QComboBox()
+        self.filter_combo.addItems(['الكل', 'النشطون', 'الخريجون'])
+        self.filter_combo.currentTextChanged.connect(self.load_patients)
+        btn_layout.addWidget(self.filter_combo)
+        
+        self.sort_combo = QComboBox()
+        self.sort_combo.addItems(['أبجدي (صاعد)', 'أبجدي (تنازلي)', 'الأقدم أولاً', 'الأحدث أولاً'])
+        self.sort_combo.currentTextChanged.connect(self.load_patients)
+        btn_layout.addWidget(self.sort_combo)
         
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
         
         self.table = QTableWidget()
-        self.table.setColumnCount(11)
+        self.table.setColumnCount(12)
         self.table.setHorizontalHeaderLabels([
             'الرقم', 'الاسم', 'هاتف الأهل', 'تاريخ الدخول', 'القسم',
-            'التكلفة اليومية', 'السجائر', 'العدد', 'الحالة', 'المتبقي', 'كشف الحساب'
+            'التكلفة اليومية', 'السجائر', 'العدد', 'الحالة', 'المتبقي', 'كشف الحساب', 'إجراءات'
         ])
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.table.setColumnWidth(0, 60)
+        self.table.setColumnWidth(1, 300)
+        self.table.setColumnWidth(2, 150)
+        self.table.setColumnWidth(3, 120)
+        self.table.setColumnWidth(4, 100)
+        self.table.setColumnWidth(5, 120)
+        self.table.setColumnWidth(6, 80)
+        self.table.setColumnWidth(7, 60)
+        self.table.setColumnWidth(8, 100)
+        self.table.setColumnWidth(9, 120)
+        self.table.setColumnWidth(10, 120)
+        self.table.setColumnWidth(11, 250)
         self.table.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout.addWidget(self.table)
         
@@ -522,28 +552,9 @@ class PatientsWidget(QWidget):
             QMessageBox.warning(self, 'خطأ', 'لم يتم العثور على بيانات المريض')
     
     def load_patients(self):
-        patients = self.patient_mgr.get_all_patients()
-        self.table.setRowCount(len(patients))
+        filter_text = self.filter_combo.currentText() if hasattr(self, 'filter_combo') else 'الكل'
+        sort_text = self.sort_combo.currentText() if hasattr(self, 'sort_combo') else 'الأحدث أولاً'
         
-        for row, patient in enumerate(patients):
-            balance = self.patient_mgr.get_patient_balance(patient[0])
-            
-            self.table.setItem(row, 0, QTableWidgetItem(str(patient[0])))
-            self.table.setItem(row, 1, QTableWidgetItem(patient[1]))
-            self.table.setItem(row, 2, QTableWidgetItem(patient[2]))
-            self.table.setItem(row, 3, QTableWidgetItem(patient[3]))
-            self.table.setItem(row, 4, QTableWidgetItem(patient[4]))
-            self.table.setItem(row, 5, QTableWidgetItem(f'{patient[5]:.2f}'))
-            self.table.setItem(row, 6, QTableWidgetItem('نعم' if patient[6] else 'لا'))
-            self.table.setItem(row, 7, QTableWidgetItem(str(patient[7])))
-            self.table.setItem(row, 8, QTableWidgetItem(patient[8]))
-            self.table.setItem(row, 9, QTableWidgetItem(f'{balance:.2f}'))
-            
-            statement_btn = QPushButton('📊 كشف الحساب')
-            statement_btn.clicked.connect(lambda checked, p_id=patient[0]: self.view_patient_statement(p_id))
-            self.table.setCellWidget(row, 10, statement_btn)
-    
-    def filter_patients(self, filter_text):
         if filter_text == 'النشطون':
             patients = self.patient_mgr.get_all_patients('نشط')
         elif filter_text == 'الخريجون':
@@ -551,9 +562,21 @@ class PatientsWidget(QWidget):
         else:
             patients = self.patient_mgr.get_all_patients()
         
+        patients = list(patients)
+        if sort_text == 'أبجدي (صاعد)':
+            patients.sort(key=lambda x: x[1])
+        elif sort_text == 'أبجدي (تنازلي)':
+            patients.sort(key=lambda x: x[1], reverse=True)
+        elif sort_text == 'الأقدم أولاً':
+            patients.sort(key=lambda x: x[3])
+        else:
+            patients.sort(key=lambda x: x[3], reverse=True)
+        
         self.table.setRowCount(len(patients))
+        
         for row, patient in enumerate(patients):
             balance = self.patient_mgr.get_patient_balance(patient[0])
+            
             self.table.setItem(row, 0, QTableWidgetItem(str(patient[0])))
             self.table.setItem(row, 1, QTableWidgetItem(patient[1]))
             self.table.setItem(row, 2, QTableWidgetItem(patient[2]))
@@ -568,3 +591,89 @@ class PatientsWidget(QWidget):
             statement_btn = QPushButton('📊 كشف الحساب')
             statement_btn.clicked.connect(lambda checked, p_id=patient[0]: self.view_patient_statement(p_id))
             self.table.setCellWidget(row, 10, statement_btn)
+            
+            actions_widget = QWidget()
+            actions_layout = QHBoxLayout()
+            actions_layout.setContentsMargins(2, 2, 2, 2)
+            
+            edit_btn = QPushButton('✏️')
+            edit_btn.setFixedWidth(35)
+            edit_btn.clicked.connect(lambda checked, p_id=patient[0]: self.edit_patient(p_id))
+            actions_layout.addWidget(edit_btn)
+            
+            delete_btn = QPushButton('🗑️')
+            delete_btn.setFixedWidth(35)
+            delete_btn.clicked.connect(lambda checked, p_id=patient[0]: self.delete_patient(p_id))
+            actions_layout.addWidget(delete_btn)
+            
+            if patient[8] == 'نشط':
+                discharge_btn = QPushButton('🏁')
+                discharge_btn.setFixedWidth(35)
+                discharge_btn.clicked.connect(lambda checked, p_id=patient[0]: self.discharge_patient(p_id))
+                actions_layout.addWidget(discharge_btn)
+            
+            actions_widget.setLayout(actions_layout)
+            self.table.setCellWidget(row, 11, actions_widget)
+    
+    def search_patients(self):
+        search_text = self.search_input.text().lower()
+        for row in range(self.table.rowCount()):
+            name_item = self.table.item(row, 1)
+            phone_item = self.table.item(row, 2)
+            if name_item and phone_item:
+                name = name_item.text().lower()
+                phone = phone_item.text().lower()
+                if search_text in name or search_text in phone:
+                    self.table.setRowHidden(row, False)
+                else:
+                    self.table.setRowHidden(row, True)
+    
+    def edit_patient(self, patient_id):
+        patient = self.patient_mgr.get_patient(patient_id)
+        if not patient:
+            return
+        
+        dialog = AddPatientDialog(self)
+        dialog.setWindowTitle('تعديل بيانات المريض')
+        dialog.name_input.setText(patient[1])
+        dialog.phone_input.setText(patient[2] if patient[2] else '')
+        dialog.date_input.setDate(QDate.fromString(patient[3], 'yyyy-MM-dd'))
+        dialog.department_input.setCurrentText(patient[4])
+        dialog.cost_input.setText(str(patient[5]))
+        dialog.cigarettes_check.setChecked(bool(patient[6]))
+        dialog.cigarettes_count.setValue(patient[7])
+        
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            data = dialog.get_data()
+            self.patient_mgr.update_patient(
+                patient_id, data['name'], data['family_phone'],
+                data['department'], data['daily_cost'],
+                data['receives_cigarettes'], data['cigarettes_count']
+            )
+            QMessageBox.information(self, 'نجح', 'تم تحديث بيانات المريض بنجاح')
+            self.load_patients()
+    
+    def delete_patient(self, patient_id):
+        reply = QMessageBox.question(
+            self, 'تأكيد الحذف',
+            'هل أنت متأكد من حذف السجل نهائياً؟ هذا الإجراء لا يمكن التراجع عنه.',
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                self.db.execute('DELETE FROM patients WHERE id = ?', (patient_id,))
+                QMessageBox.information(self, 'نجح', 'تم حذف المريض بنجاح')
+                self.load_patients()
+            except Exception as e:
+                QMessageBox.critical(self, 'خطأ', f'حدث خطأ أثناء الحذف:\n{str(e)}')
+    
+    def discharge_patient(self, patient_id):
+        reply = QMessageBox.question(
+            self, 'تأكيد التخريج',
+            'هل أنت متأكد من تخريج هذا المريض؟',
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.patient_mgr.discharge_patient(patient_id)
+            QMessageBox.information(self, 'نجح', 'تم تخريج المريض بنجاح')
+            self.load_patients()

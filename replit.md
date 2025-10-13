@@ -2,6 +2,47 @@
 
 "دار الحياة" (Dar Alhayat) is a comprehensive desktop application for managing a psychiatric and addiction treatment facility. Built with PyQt6 and SQLite, it provides an Arabic-language interface for managing patients, payments, expenses, employees, and generating financial reports. The system tracks patient admissions, daily costs, cigarette allocations, payments, and produces detailed accounting statements.
 
+## Recent Updates (October 2025)
+
+### Authentication & Security
+- **Bcrypt Password Hashing**: Implemented secure password storage using bcrypt encryption
+- **New Users Created**: 
+  - Admin user (username: admin, password: 1231)
+  - Accountant user (username: user, password: 1)
+- **Auth Module**: Created dedicated authentication manager (`modules/auth.py`) for user management
+
+### UI/UX Enhancements
+- **Bold Fonts**: Applied bold font styling (QFont.Weight.Bold) application-wide for better readability
+- **Search Functionality**: Added search bars for patients with real-time filtering by name or phone
+- **Filter & Sort Options**: 
+  - Status filter (All, Active, Discharged)
+  - Sort options (Alphabetical ascending/descending, Oldest first, Newest first)
+- **Wider Table Columns**: Set fixed column widths for better data visibility (Name: 300px, Phone: 150px, etc.)
+- **Auto-fit Button**: Added button to automatically resize columns to fit content
+
+### Patient Management Improvements
+- **Action Buttons**: Added edit (✏️), delete (🗑️), and discharge (🏁) buttons for each patient
+- **Edit Patient**: Pre-filled dialog for updating patient information
+- **Delete Patient**: Confirmation dialog before permanent deletion
+- **Discharge Patient**: One-click patient discharge with automatic status update
+
+### Cigarette Cost Calculation Fix
+- **Accurate Formula**: Updated cigarette cost calculation to use `cigarettes_per_day * days * (cigarette_box_cost / cigarettes_per_box)`
+- **New Settings**: Added `cigarette_box_cost` and `cigarettes_per_box` to settings table
+- **Per-Patient Pricing**: System supports patient-specific cigarette pricing (priority over global settings)
+
+### Database Management
+- **Import Functionality**: Added database import feature with automatic backup and cleanup
+- **Backup System**: Creates timestamped backups before any database replacement
+- **Auto-cleanup**: Removes old database files while preserving the imported one
+- **Settings Integration**: Database import button added to Settings page
+
+### Technical Improvements
+- **Environment Setup**: Updated to PyQt6 6.9.1+ for Qt 6.9 compatibility
+- **System Dependencies**: Installed libxkbcommon, libGL, xorg packages for proper display
+- **Xvfb Integration**: Configured virtual X server for VNC display support
+- **Display Configuration**: Set DISPLAY=:99 for Replit VNC compatibility
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.

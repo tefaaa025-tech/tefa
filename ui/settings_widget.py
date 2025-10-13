@@ -5,6 +5,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QDate
 from PyQt6.QtGui import QFont
 from datetime import datetime, timedelta
 from modules.reports import ReportGenerator
+from modules.db_import import DatabaseImportDialog
 
 class SettingsWidget(QWidget):
     theme_changed = pyqtSignal(str)
@@ -122,6 +123,16 @@ class SettingsWidget(QWidget):
         info_group.setLayout(info_layout)
         layout.addWidget(info_group)
         
+        db_group = QGroupBox('قاعدة البيانات')
+        db_layout = QVBoxLayout()
+        
+        import_btn = QPushButton('📁 استيراد قاعدة بيانات')
+        import_btn.clicked.connect(self.import_database)
+        db_layout.addWidget(import_btn)
+        
+        db_group.setLayout(db_layout)
+        layout.addWidget(db_group)
+        
         layout.addStretch()
         
         self.setLayout(layout)
@@ -210,3 +221,8 @@ class SettingsWidget(QWidget):
                 QMessageBox.information(self, 'نجح', f'تم إنشاء التقرير بنجاح في:\n{file_path}')
             except Exception as e:
                 QMessageBox.critical(self, 'خطأ', f'حدث خطأ أثناء إنشاء التقرير:\n{str(e)}')
+    
+    def import_database(self):
+        if self.db:
+            dialog = DatabaseImportDialog(self.db.db_path, self)
+            dialog.exec()
