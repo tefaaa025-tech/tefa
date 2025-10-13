@@ -87,9 +87,9 @@ class ExpensesWidget(QWidget):
         layout.addLayout(btn_layout)
         
         self.table = QTableWidget()
-        self.table.setColumnCount(5)
+        self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels([
-            'الرقم', 'البند', 'المبلغ', 'التاريخ', 'الوصف'
+            'الرقم', 'البند', 'المبلغ', 'التاريخ', 'الوصف', 'إجراءات'
         ])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.table.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
@@ -120,3 +120,69 @@ class ExpensesWidget(QWidget):
             self.table.setItem(row, 2, QTableWidgetItem(f'{expense[2]:.2f}'))
             self.table.setItem(row, 3, QTableWidgetItem(expense[3]))
             self.table.setItem(row, 4, QTableWidgetItem(expense[4] if expense[4] else ''))
+            
+            if self.current_user and self.current_user.get('role') == 'admin':
+                actions_widget = QWidget()
+                actions_layout = QHBoxLayout()
+                actions_layout.setContentsMargins(0, 0, 0, 0)
+                
+                edit_btn = QPushButton('✏️')
+                edit_btn.setFixedWidth(40)
+                edit_btn.clicked.connect(lambda checked, eid=expense[0]: self.edit_expense(eid))
+                actions_layout.addWidget(edit_btn)
+                
+                delete_btn = QPushButton('🗑️')
+                delete_btn.setFixedWidth(40)
+                delete_btn.setStyleSheet('background-color: #e74c3c; color: white;')
+                delete_btn.clicked.connect(lambda checked, eid=expense[0]: self.delete_expense(eid))
+                actions_layout.addWidget(delete_btn)
+                
+                actions_widget.setLayout(actions_layout)
+                self.table.setCellWidget(row, 5, actions_widget)
+            else:
+                no_access_label = QLabel('🔒')
+                no_access_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.table.setCellWidget(row, 5, no_access_label)
+    
+    def edit_expense(self, expense_id):
+        if not self.current_user or self.current_user.get('role') != 'admin':
+            QMessageBox.warning(self, 'تحذير', '⚠️ غير مصرح لك بتعديل البيانات')
+            return
+        
+        expense = self.expense_mgr.get_expense(expense_id)
+        if not expense:
+            QMessageBox.warning(self, 'خطأ', 'لم يتم العثور على المصروف')
+            return
+        
+        dialog = AddExpenseDialog(self)
+        dialog.setWindowTitle('تعديل مصروف')
+        dialog.category_input.setText(expense[1])
+        dialog.amount_input.setText(str(expense[2]))
+        dialog.date_input.setDate(QDate.fromString(expense[3], 'yyyy-MM-dd'))
+        dialog.description_input.setText(expense[4] if expense[4] else '')
+        
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            data = dialog.get_data()
+            if data['category'] and data['amount'] > 0:
+                self.expense_mgr.update_expense(
+                    expense_id, data['category'], data['amount'],
+                    data['expense_date'], data['description']
+                )
+                QMessageBox.information(self, 'نجح', 'تم تعديل المصروف بنجاح')
+                self.load_expenses()
+    
+    def delete_expense(self, expense_id):
+        if not self.current_user or self.current_user.get('role') != 'admin':
+            QMessageBox.warning(self, 'تحذير', '⚠️ غير مصرح لك بحذف البيانات')
+            return
+        
+        reply = QMessageBox.question(
+            self, 'تأكيد الحذف',
+            'هل أنت متأكد من حذف هذا المصروف؟\nلا يمكن التراجع عن هذا الإجراء.',
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            self.expense_mgr.delete_expense(expense_id)
+            QMessageBox.information(self, 'نجح', 'تم حذف المصروف بنجاح')
+            self.load_expenses()

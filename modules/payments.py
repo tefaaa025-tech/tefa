@@ -43,3 +43,21 @@ class PaymentManager:
         '''
         result = self.db.fetchone(query, (str(year), f'{month:02d}'))
         return result[0] if result[0] else 0
+    
+    def get_payment(self, payment_id):
+        query = 'SELECT * FROM payments WHERE id = ?'
+        return self.db.fetchone(query, (payment_id,))
+    
+    def update_payment(self, payment_id, patient_id, amount, payment_date, notes=''):
+        query = '''
+            UPDATE payments 
+            SET patient_id = ?, amount = ?, payment_date = ?, notes = ?
+            WHERE id = ?
+        '''
+        self.db.execute(query, (patient_id, amount, payment_date, notes, payment_id))
+        return True
+    
+    def delete_payment(self, payment_id):
+        query = 'DELETE FROM payments WHERE id = ?'
+        self.db.execute(query, (payment_id,))
+        return True

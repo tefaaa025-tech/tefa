@@ -97,3 +97,16 @@ class EmployeeManager:
             ORDER BY et.transaction_date DESC
         '''
         return self.db.fetchall(query)
+    
+    def delete_employee(self, employee_id):
+        trans_query = 'DELETE FROM employee_transactions WHERE employee_id = ?'
+        self.db.execute(trans_query, (employee_id,))
+        
+        employee_query = 'DELETE FROM employees WHERE id = ?'
+        self.db.execute(employee_query, (employee_id,))
+        return True
+    
+    def delete_transaction(self, transaction_id):
+        query = 'DELETE FROM employee_transactions WHERE id = ?'
+        self.db.execute(query, (transaction_id,))
+        return True

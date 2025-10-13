@@ -89,9 +89,9 @@ class PaymentsWidget(QWidget):
         layout.addLayout(btn_layout)
         
         self.table = QTableWidget()
-        self.table.setColumnCount(5)
+        self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels([
-            'الرقم', 'اسم المريض', 'المبلغ', 'التاريخ', 'ملاحظات'
+            'الرقم', 'اسم المريض', 'المبلغ', 'التاريخ', 'ملاحظات', 'إجراءات'
         ])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.table.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
@@ -127,3 +127,77 @@ class PaymentsWidget(QWidget):
             self.table.setItem(row, 2, QTableWidgetItem(f'{payment[2]:.2f}'))
             self.table.setItem(row, 3, QTableWidgetItem(payment[3]))
             self.table.setItem(row, 4, QTableWidgetItem(payment[4] if payment[4] else ''))
+            
+            if self.current_user and self.current_user.get('role') == 'admin':
+                actions_widget = QWidget()
+                actions_layout = QHBoxLayout()
+                actions_layout.setContentsMargins(0, 0, 0, 0)
+                
+                edit_btn = QPushButton('✏️')
+                edit_btn.setFixedWidth(40)
+                edit_btn.clicked.connect(lambda checked, pid=payment[0]: self.edit_payment(pid))
+                actions_layout.addWidget(edit_btn)
+                
+                delete_btn = QPushButton('🗑️')
+                delete_btn.setFixedWidth(40)
+                delete_btn.setStyleSheet('background-color: #e74c3c; color: white;')
+                delete_btn.clicked.connect(lambda checked, pid=payment[0]: self.delete_payment(pid))
+                actions_layout.addWidget(delete_btn)
+                
+                actions_widget.setLayout(actions_layout)
+                self.table.setCellWidget(row, 5, actions_widget)
+            else:
+                no_access_label = QLabel('🔒')
+                no_access_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.table.setCellWidget(row, 5, no_access_label)
+    
+    def edit_payment(self, payment_id):
+        if not self.current_user or self.current_user.get('role') != 'admin':
+            QMessageBox.warning(self, 'تحذير', '⚠️ غير مصرح لك بتعديل البيانات')
+            return
+        
+        payment = self.payment_mgr.get_payment(payment_id)
+        if not payment:
+            QMessageBox.warning(self, 'خطأ', 'لم يتم العثور على الدفعة')
+            return
+        
+        patients = self.patient_mgr.get_all_patients('نشط')
+        all_patients = self.patient_mgr.get_all_patients()
+        
+        dialog = AddPaymentDialog(all_patients, self)
+        dialog.setWindowTitle('تعديل دفعة')
+        
+        for i in range(dialog.patient_combo.count()):
+            if dialog.patient_combo.itemData(i) == payment[1]:
+                dialog.patient_combo.setCurrentIndex(i)
+                break
+        
+        dialog.amount_input.setText(str(payment[2]))
+        dialog.date_input.setDate(QDate.fromString(payment[3], 'yyyy-MM-dd'))
+        dialog.notes_input.setText(payment[4] if payment[4] else '')
+        
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            data = dialog.get_data()
+            if data['amount'] > 0:
+                self.payment_mgr.update_payment(
+                    payment_id, data['patient_id'], data['amount'],
+                    data['payment_date'], data['notes']
+                )
+                QMessageBox.information(self, 'نجح', 'تم تعديل الدفعة بنجاح')
+                self.load_payments()
+    
+    def delete_payment(self, payment_id):
+        if not self.current_user or self.current_user.get('role') != 'admin':
+            QMessageBox.warning(self, 'تحذير', '⚠️ غير مصرح لك بحذف البيانات')
+            return
+        
+        reply = QMessageBox.question(
+            self, 'تأكيد الحذف',
+            'هل أنت متأكد من حذف هذه الدفعة؟\nلا يمكن التراجع عن هذا الإجراء.',
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            self.payment_mgr.delete_payment(payment_id)
+            QMessageBox.information(self, 'نجح', 'تم حذف الدفعة بنجاح')
+            self.load_payments()

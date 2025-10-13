@@ -496,9 +496,9 @@ class EmployeesWidget(QWidget):
         layout.addLayout(btn_layout)
         
         self.table = QTableWidget()
-        self.table.setColumnCount(7)
+        self.table.setColumnCount(8)
         self.table.setHorizontalHeaderLabels([
-            'الرقم', 'الاسم', 'المنصب', 'الهاتف', 'تاريخ التوظيف', 'الراتب', 'إجراءات'
+            'الرقم', 'الاسم', 'المنصب', 'الهاتف', 'تاريخ التوظيف', 'الراتب', 'التفاصيل', 'إجراءات'
         ])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.table.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
@@ -556,6 +556,74 @@ class EmployeesWidget(QWidget):
             self.table.setItem(row, 4, QTableWidgetItem(employee[4]))
             self.table.setItem(row, 5, QTableWidgetItem(f'{employee[5]:.2f}'))
             
-            details_btn = QPushButton('📊 التفاصيل')
+            details_btn = QPushButton('📊')
+            details_btn.setFixedWidth(40)
             details_btn.clicked.connect(lambda checked, emp_id=employee[0]: self.view_employee_details(emp_id))
             self.table.setCellWidget(row, 6, details_btn)
+            
+            if self.current_user and self.current_user.get('role') == 'admin':
+                actions_widget = QWidget()
+                actions_layout = QHBoxLayout()
+                actions_layout.setContentsMargins(0, 0, 0, 0)
+                
+                edit_btn = QPushButton('✏️')
+                edit_btn.setFixedWidth(40)
+                edit_btn.clicked.connect(lambda checked, eid=employee[0]: self.edit_employee(eid))
+                actions_layout.addWidget(edit_btn)
+                
+                delete_btn = QPushButton('🗑️')
+                delete_btn.setFixedWidth(40)
+                delete_btn.setStyleSheet('background-color: #e74c3c; color: white;')
+                delete_btn.clicked.connect(lambda checked, eid=employee[0]: self.delete_employee(eid))
+                actions_layout.addWidget(delete_btn)
+                
+                actions_widget.setLayout(actions_layout)
+                self.table.setCellWidget(row, 7, actions_widget)
+            else:
+                no_access_label = QLabel('🔒')
+                no_access_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.table.setCellWidget(row, 7, no_access_label)
+    
+    def edit_employee(self, employee_id):
+        if not self.current_user or self.current_user.get('role') != 'admin':
+            QMessageBox.warning(self, 'تحذير', '⚠️ غير مصرح لك بتعديل البيانات')
+            return
+        
+        employee = self.employee_mgr.get_employee(employee_id)
+        if not employee:
+            QMessageBox.warning(self, 'خطأ', 'لم يتم العثور على الموظف')
+            return
+        
+        dialog = AddEmployeeDialog(self)
+        dialog.setWindowTitle('تعديل موظف')
+        dialog.name_input.setText(employee[1])
+        dialog.position_input.setText(employee[2] if employee[2] else '')
+        dialog.phone_input.setText(employee[3] if employee[3] else '')
+        dialog.hire_date_input.setDate(QDate.fromString(employee[4], 'yyyy-MM-dd'))
+        dialog.salary_input.setText(str(employee[5]))
+        
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            data = dialog.get_data()
+            if data['name'] and data['base_salary'] > 0:
+                self.employee_mgr.update_employee(
+                    employee_id, data['name'], data['position'],
+                    data['phone'], data['base_salary']
+                )
+                QMessageBox.information(self, 'نجح', 'تم تعديل الموظف بنجاح')
+                self.load_employees()
+    
+    def delete_employee(self, employee_id):
+        if not self.current_user or self.current_user.get('role') != 'admin':
+            QMessageBox.warning(self, 'تحذير', '⚠️ غير مصرح لك بحذف البيانات')
+            return
+        
+        reply = QMessageBox.question(
+            self, 'تأكيد الحذف',
+            'هل أنت متأكد من حذف هذا الموظف؟\nسيتم حذف جميع معاملاته المالية أيضاً.\nلا يمكن التراجع عن هذا الإجراء.',
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            self.employee_mgr.delete_employee(employee_id)
+            QMessageBox.information(self, 'نجح', 'تم حذف الموظف بنجاح')
+            self.load_employees()

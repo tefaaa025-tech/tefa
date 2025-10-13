@@ -39,3 +39,21 @@ class ExpenseManager:
             ORDER BY total DESC
         '''
         return self.db.fetchall(query)
+    
+    def get_expense(self, expense_id):
+        query = 'SELECT * FROM expenses WHERE id = ?'
+        return self.db.fetchone(query, (expense_id,))
+    
+    def update_expense(self, expense_id, category, amount, expense_date, description=''):
+        query = '''
+            UPDATE expenses 
+            SET category = ?, amount = ?, expense_date = ?, description = ?
+            WHERE id = ?
+        '''
+        self.db.execute(query, (category, amount, expense_date, description, expense_id))
+        return True
+    
+    def delete_expense(self, expense_id):
+        query = 'DELETE FROM expenses WHERE id = ?'
+        self.db.execute(query, (expense_id,))
+        return True

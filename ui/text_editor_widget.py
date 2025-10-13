@@ -2,9 +2,11 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                              QTextEdit, QFileDialog, QMessageBox, QToolBar,
                              QFontComboBox, QSpinBox, QDialog, QLabel,
-                             QDialogButtonBox, QMenu, QDoubleSpinBox, QComboBox)
+                             QDialogButtonBox, QMenu, QDoubleSpinBox, QComboBox,
+                             QColorDialog)
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QTextCharFormat, QTextCursor, QPageSize, QPageLayout, QTextTableFormat, QAction
+from PyQt6.QtGui import (QFont, QTextCharFormat, QTextCursor, QPageSize, QPageLayout, 
+                         QTextTableFormat, QAction, QColor, QTextListFormat)
 from PyQt6.QtPrintSupport import QPrinter, QPrintDialog
 from docx import Document
 from docx.shared import Pt, Inches
@@ -81,6 +83,26 @@ class TextEditorWidget(QWidget):
         align_right_btn.setFixedWidth(40)
         toolbar_layout.addWidget(align_right_btn)
         
+        toolbar_layout.addSpacing(20)
+        
+        text_color_btn = QPushButton('🎨 لون النص')
+        text_color_btn.clicked.connect(self.change_text_color)
+        toolbar_layout.addWidget(text_color_btn)
+        
+        bg_color_btn = QPushButton('🖌️ لون الخلفية')
+        bg_color_btn.clicked.connect(self.change_background_color)
+        toolbar_layout.addWidget(bg_color_btn)
+        
+        toolbar_layout.addSpacing(20)
+        
+        bullet_btn = QPushButton('• قائمة منقطة')
+        bullet_btn.clicked.connect(self.insert_bullet_list)
+        toolbar_layout.addWidget(bullet_btn)
+        
+        numbered_btn = QPushButton('1. قائمة مرقمة')
+        numbered_btn.clicked.connect(self.insert_numbered_list)
+        toolbar_layout.addWidget(numbered_btn)
+        
         toolbar_layout.addStretch()
         layout.addLayout(toolbar_layout)
         
@@ -123,6 +145,14 @@ class TextEditorWidget(QWidget):
         edit_table_btn.clicked.connect(self.edit_current_table)
         btn_layout.addWidget(edit_table_btn)
         
+        undo_btn = QPushButton('↶ تراجع')
+        undo_btn.clicked.connect(self.text_edit.undo)
+        btn_layout.addWidget(undo_btn)
+        
+        redo_btn = QPushButton('↷ إعادة')
+        redo_btn.clicked.connect(self.text_edit.redo)
+        btn_layout.addWidget(redo_btn)
+        
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
         
@@ -160,6 +190,32 @@ class TextEditorWidget(QWidget):
     
     def align_right(self):
         self.text_edit.setAlignment(Qt.AlignmentFlag.AlignRight)
+    
+    def change_text_color(self):
+        color = QColorDialog.getColor()
+        if color.isValid():
+            fmt = QTextCharFormat()
+            fmt.setForeground(color)
+            self.text_edit.mergeCurrentCharFormat(fmt)
+    
+    def change_background_color(self):
+        color = QColorDialog.getColor()
+        if color.isValid():
+            fmt = QTextCharFormat()
+            fmt.setBackground(color)
+            self.text_edit.mergeCurrentCharFormat(fmt)
+    
+    def insert_bullet_list(self):
+        cursor = self.text_edit.textCursor()
+        list_format = QTextListFormat()
+        list_format.setStyle(QTextListFormat.Style.ListDisc)
+        cursor.createList(list_format)
+    
+    def insert_numbered_list(self):
+        cursor = self.text_edit.textCursor()
+        list_format = QTextListFormat()
+        list_format.setStyle(QTextListFormat.Style.ListDecimal)
+        cursor.createList(list_format)
     
     def new_document(self):
         if self.text_edit.document().isModified():
@@ -378,6 +434,16 @@ class TextEditorWidget(QWidget):
             edit_table_action = QAction('تحرير خصائص الجدول', self)
             edit_table_action.triggered.connect(lambda: self.edit_table_properties(table))
             menu.addAction(edit_table_action)
+            
+            menu.addSeparator()
+            
+            merge_cells_action = QAction('دمج الخلايا المحددة', self)
+            merge_cells_action.triggered.connect(lambda: self.merge_selected_cells(table, cursor))
+            menu.addAction(merge_cells_action)
+            
+            split_cell_action = QAction('فك دمج الخلية', self)
+            split_cell_action.triggered.connect(lambda: self.split_current_cell(table, cursor))
+            menu.addAction(split_cell_action)
         else:
             default_action = QAction('لا يوجد جدول في موضع المؤشر', self)
             default_action.setEnabled(False)
@@ -511,3 +577,99 @@ class TextEditorWidget(QWidget):
             self.edit_table_properties(table)
         else:
             QMessageBox.warning(self, 'تحذير', 'الرجاء وضع المؤشر داخل الجدول المراد تحريره')
+    
+    def merge_selected_cells(self, table, cursor):
+        cell = table.cellAt(cursor)
+        if not cell.isValid():
+            QMessageBox.warning(self, 'خطأ', 'لا يمكن تحديد الخلية')
+            return
+        
+        dialog = QDialog(self)
+        dialog.setWindowTitle('دمج الخلايا')
+        dialog.setFixedWidth(350)
+        
+        layout = QVBoxLayout()
+        
+        info_label = QLabel(f'الخلية الحالية: صف {cell.row() + 1}, عمود {cell.column() + 1}')
+        layout.addWidget(info_label)
+        
+        rows_layout = QHBoxLayout()
+        rows_layout.addWidget(QLabel('عدد الصفوف للدمج:'))
+        rows_spin = QSpinBox()
+        rows_spin.setMinimum(1)
+        rows_spin.setMaximum(table.rows() - cell.row())
+        rows_spin.setValue(1)
+        rows_layout.addWidget(rows_spin)
+        layout.addLayout(rows_layout)
+        
+        cols_layout = QHBoxLayout()
+        cols_layout.addWidget(QLabel('عدد الأعمدة للدمج:'))
+        cols_spin = QSpinBox()
+        cols_spin.setMinimum(1)
+        cols_spin.setMaximum(table.columns() - cell.column())
+        cols_spin.setValue(1)
+        cols_layout.addWidget(cols_spin)
+        layout.addLayout(cols_layout)
+        
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | 
+            QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        
+        dialog.setLayout(layout)
+        
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            num_rows = rows_spin.value()
+            num_cols = cols_spin.value()
+            
+            if num_rows > 1 or num_cols > 1:
+                table.mergeCells(cell.row(), cell.column(), num_rows, num_cols)
+                QMessageBox.information(self, 'نجح', f'تم دمج {num_rows}×{num_cols} خلايا بنجاح')
+            else:
+                QMessageBox.information(self, 'تنبيه', 'لم يتم تحديد خلايا للدمج')
+    
+    def split_current_cell(self, table, cursor):
+        cell = table.cellAt(cursor)
+        if not cell.isValid():
+            QMessageBox.warning(self, 'خطأ', 'لا يمكن تحديد الخلية')
+            return
+        
+        row_span = cell.rowSpan()
+        col_span = cell.columnSpan()
+        
+        if row_span > 1 or col_span > 1:
+            dialog = QDialog(self)
+            dialog.setWindowTitle('فك دمج الخلية')
+            dialog.setFixedWidth(350)
+            
+            layout = QVBoxLayout()
+            
+            info_label = QLabel(f'''
+            <div style="text-align: right; direction: rtl;">
+            <p>الخلية الحالية مدمجة:</p>
+            <p><b>عدد الصفوف:</b> {row_span}</p>
+            <p><b>عدد الأعمدة:</b> {col_span}</p>
+            <p>سيتم فك دمج هذه الخلية إلى {row_span * col_span} خلية منفصلة</p>
+            </div>
+            ''')
+            info_label.setTextFormat(Qt.TextFormat.RichText)
+            layout.addWidget(info_label)
+            
+            buttons = QDialogButtonBox(
+                QDialogButtonBox.StandardButton.Ok | 
+                QDialogButtonBox.StandardButton.Cancel
+            )
+            buttons.accepted.connect(dialog.accept)
+            buttons.rejected.connect(dialog.reject)
+            layout.addWidget(buttons)
+            
+            dialog.setLayout(layout)
+            
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                table.splitCell(cell.row(), cell.column(), 1, 1)
+                QMessageBox.information(self, 'نجح', 'تم فك دمج الخلية بنجاح')
+        else:
+            QMessageBox.information(self, 'تنبيه', 'هذه الخلية غير مدمجة')
