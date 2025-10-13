@@ -6,6 +6,34 @@
 
 ### NEW FEATURES (Latest Update - October 13, 2025)
 
+#### 1. Edit/Delete Functionality for Payments, Expenses, and Employees (Admin-Only)
+- **Permission-Based Access**: Admin users can edit and delete records; regular users see a lock icon 🔒
+- **Features**:
+  - Edit buttons (✏️) pre-fill dialogs with existing data for quick updates
+  - Delete buttons (🗑️) with confirmation dialogs to prevent accidental deletion
+  - Backend permission validation prevents unauthorized operations
+  - Cascading delete for employees: removes all associated financial transactions automatically
+- **UI Indicators**:
+  - Admin: sees edit and delete buttons
+  - User: sees lock icon and receives warning message when attempting restricted operations
+  
+#### 2. Enhanced Text Editor Features
+- **Cell Merging**: 
+  - Merge multiple cells into one (specify rows × columns)
+  - Unmerge previously merged cells
+  - Visual feedback showing merge dimensions
+- **Text Formatting**:
+  - Text color picker 🎨
+  - Background color picker 🖌️
+  - Bullet lists (•)
+  - Numbered lists (1. 2. 3.)
+- **Editing Tools**:
+  - Undo button (↶ تراجع)
+  - Redo button (↷ إعادة)
+- **Access**: Right-click context menu or toolbar buttons
+
+### PREVIOUS FEATURES (October 13, 2025)
+
 #### 1. Unified Cigarette Pricing System
 - **Single Price Source**: All cigarette cost calculations now use the unified `cigarette_pack_price` setting
 - **Automatic Application**: Price changes from the cigarettes page immediately affect all patient statements
@@ -45,10 +73,10 @@
   - **Admin**: Full access (add, edit, delete, discharge)
   - **User**: Add-only access (cannot edit or delete)
 - **Permission Enforcement**:
-  - Protection in PatientsWidget for edit, delete, and discharge operations
+  - Protection in all widgets (Patients, Payments, Expenses, Employees) for edit, delete, and discharge operations
   - Warning message: "⚠️ غير مصرح لك بتعديل أو حذف البيانات"
   - Backend validation prevents unauthorized operations even via shortcuts
-- **Note**: PaymentsWidget, ExpensesWidget, and EmployeesWidget only support adding records (no edit/delete functionality), so they're automatically compliant
+  - Cascading delete ensures data integrity (e.g., deleting employee removes their transactions)
 
 #### 3. Calculator Redesign
 - **New Button Layout** (Left to Right):
@@ -68,6 +96,10 @@
   - Text formatting: Bold, Italic, Underline
   - Alignment: Left, Center, Right
   - Font selection and size control
+  - Text and background colors
+  - Bullet and numbered lists
+  - Table cell merging and splitting
+  - Undo/Redo functionality
   - Save as .txt or .docx files
   - Open previously saved files
   - Direct printing support
