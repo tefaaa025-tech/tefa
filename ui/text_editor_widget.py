@@ -1,13 +1,15 @@
 # --- NEW FEATURE: Text Editor ---
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                              QTextEdit, QFileDialog, QMessageBox, QToolBar,
-                             QFontComboBox, QSpinBox)
+                             QFontComboBox, QSpinBox, QDialog, QLabel,
+                             QDialogButtonBox)  # --- NEW (إضافة QDialog و QLabel و QDialogButtonBox) ---
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QTextCharFormat, QTextCursor, QPageSize, QPageLayout
+from PyQt6.QtGui import QFont, QTextCharFormat, QTextCursor, QPageSize, QPageLayout, QTextTableFormat
 from PyQt6.QtPrintSupport import QPrinter, QPrintDialog
 from docx import Document
 from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from bs4 import BeautifulSoup  # --- NEW (لمعالجة HTML وتحويل الجداول) ---
 import os
 
 class TextEditorWidget(QWidget):
@@ -109,6 +111,11 @@ class TextEditorWidget(QWidget):
         print_btn = QPushButton('🖨️ طباعة')
         print_btn.clicked.connect(self.print_document)
         btn_layout.addWidget(print_btn)
+        
+        # --- NEW (زر إدراج جدول) ---
+        insert_table_btn = QPushButton('📊 إدراج جدول')
+        insert_table_btn.clicked.connect(self.insert_table)
+        btn_layout.addWidget(insert_table_btn)
         
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
@@ -223,27 +230,106 @@ class TextEditorWidget(QWidget):
             try:
                 doc = Document()
                 
-                # Set RTL direction for Arabic text
-                section = doc.sections[0]
+                # --- FIX (تحويل الجداول من QTextEdit إلى Word) ---
+                # Get HTML content to preserve tables
+                html_content = self.text_edit.toHtml()
+                soup = BeautifulSoup(html_content, 'html.parser')
                 
-                # Get text from editor
-                text = self.text_edit.toPlainText()
-                paragraphs = text.split('\n')
-                
-                for para_text in paragraphs:
-                    if para_text.strip():
-                        para = doc.add_paragraph(para_text)
-                        # Set RTL for Arabic text
-                        para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-                    else:
-                        doc.add_paragraph()
+                # Process HTML elements
+                for element in soup.find_all(['p', 'table']):
+                    if element.name == 'table':
+                        # Extract table data
+                        rows_data = []
+                        for tr in element.find_all('tr'):
+                            row_data = []
+                            for td in tr.find_all('td'):
+                                row_data.append(td.get_text(strip=True))
+                            if row_data:
+                                rows_data.append(row_data)
+                        
+                        # Create Word table
+                        if rows_data:
+                            num_rows = len(rows_data)
+                            num_cols = len(rows_data[0]) if rows_data else 0
+                            
+                            if num_cols > 0:
+                                table = doc.add_table(rows=num_rows, cols=num_cols)
+                                table.style = 'Table Grid'
+                                
+                                # Fill table with data
+                                for i, row_data in enumerate(rows_data):
+                                    for j, cell_text in enumerate(row_data):
+                                        if j < len(table.rows[i].cells):
+                                            table.rows[i].cells[j].text = cell_text
+                                            # Set RTL for Arabic text
+                                            for paragraph in table.rows[i].cells[j].paragraphs:
+                                                paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                    
+                    elif element.name == 'p':
+                        # Add paragraph
+                        text = element.get_text(strip=True)
+                        if text:
+                            para = doc.add_paragraph(text)
+                            para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                        else:
+                            doc.add_paragraph()
                 
                 doc.save(file_path)
                 self.current_file = file_path
                 self.text_edit.document().setModified(False)
-                QMessageBox.information(self, 'نجح', 'تم حفظ الملف بنجاح')
+                QMessageBox.information(self, 'نجح', 'تم حفظ الملف بنجاح مع الجداول')
             except Exception as e:
                 QMessageBox.critical(self, 'خطأ', f'حدث خطأ أثناء الحفظ:\n{str(e)}')
+    
+    def insert_table(self):
+        # --- NEW (إدراج جدول في محرر النصوص) ---
+        dialog = QDialog(self)
+        dialog.setWindowTitle('إدراج جدول')
+        dialog.setFixedWidth(350)
+        
+        layout = QVBoxLayout()
+        
+        rows_layout = QHBoxLayout()
+        rows_layout.addWidget(QLabel('عدد الصفوف:'))
+        rows_input = QSpinBox()
+        rows_input.setMinimum(1)
+        rows_input.setMaximum(50)
+        rows_input.setValue(3)
+        rows_layout.addWidget(rows_input)
+        layout.addLayout(rows_layout)
+        
+        cols_layout = QHBoxLayout()
+        cols_layout.addWidget(QLabel('عدد الأعمدة:'))
+        cols_input = QSpinBox()
+        cols_input.setMinimum(1)
+        cols_input.setMaximum(20)
+        cols_input.setValue(3)
+        cols_layout.addWidget(cols_input)
+        layout.addLayout(cols_layout)
+        
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | 
+            QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        
+        dialog.setLayout(layout)
+        
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            rows = rows_input.value()
+            cols = cols_input.value()
+            
+            # Insert table using QTextTable
+            cursor = self.text_edit.textCursor()
+            table_format = QTextTableFormat()
+            table_format.setBorderStyle(QTextTableFormat.BorderStyle.BorderStyle_Solid)
+            table_format.setCellPadding(5)
+            table_format.setCellSpacing(0)
+            table = cursor.insertTable(rows, cols, table_format)
+            
+            QMessageBox.information(self, 'نجح', f'تم إدراج جدول {rows}×{cols} بنجاح')
     
     def print_document(self):
         try:

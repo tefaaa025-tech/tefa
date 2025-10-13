@@ -102,6 +102,22 @@ class Database:
             )
         ''')
         
+        # --- NEW (إنشاء جدول audit_log لتسجيل العمليات المهمة) ---
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                username TEXT,
+                action_type TEXT NOT NULL,
+                action_description TEXT,
+                old_value TEXT,
+                new_value TEXT,
+                affected_count INTEGER,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+        
         self.cursor.execute('''
             SELECT COUNT(*) FROM users WHERE username = 'admin'
         ''')

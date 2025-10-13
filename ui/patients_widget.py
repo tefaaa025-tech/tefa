@@ -630,9 +630,9 @@ class PatientsWidget(QWidget):
                     self.table.setRowHidden(row, True)
     
     def edit_patient(self, patient_id):
-        # --- NEW FEATURE: Check user permissions ---
+        # --- FIX (فحص صلاحيات المستخدم قبل التعديل) ---
         if self.current_user and self.current_user.get('role') != 'admin':
-            QMessageBox.warning(self, 'تحذير', '⚠️ غير مصرح لك بتعديل أو حذف البيانات.')
+            QMessageBox.warning(self, 'تحذير', 'ليس لديك صلاحية لتعديل أو حذف البيانات')
             return
         
         patient = self.patient_mgr.get_patient(patient_id)
@@ -660,9 +660,9 @@ class PatientsWidget(QWidget):
             self.load_patients()
     
     def delete_patient(self, patient_id):
-        # --- NEW FEATURE: Check user permissions ---
+        # --- FIX (فحص صلاحيات المستخدم قبل الحذف) ---
         if self.current_user and self.current_user.get('role') != 'admin':
-            QMessageBox.warning(self, 'تحذير', '⚠️ غير مصرح لك بتعديل أو حذف البيانات.')
+            QMessageBox.warning(self, 'تحذير', 'ليس لديك صلاحية لتعديل أو حذف البيانات')
             return
         
         reply = QMessageBox.question(
@@ -679,9 +679,9 @@ class PatientsWidget(QWidget):
                 QMessageBox.critical(self, 'خطأ', f'حدث خطأ أثناء الحذف:\n{str(e)}')
     
     def discharge_patient(self, patient_id):
-        # --- NEW FEATURE: Check user permissions ---
+        # --- FIX (فحص صلاحيات المستخدم قبل التخريج) ---
         if self.current_user and self.current_user.get('role') != 'admin':
-            QMessageBox.warning(self, 'تحذير', '⚠️ غير مصرح لك بتعديل أو حذف البيانات.')
+            QMessageBox.warning(self, 'تحذير', 'ليس لديك صلاحية لتعديل أو حذف البيانات')
             return
         
         reply = QMessageBox.question(

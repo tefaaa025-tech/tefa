@@ -10,10 +10,11 @@ import webbrowser
 import tempfile
 
 class CigarettesWidget(QWidget):
-    def __init__(self, db, patient_mgr):
+    def __init__(self, db, patient_mgr, current_user=None):  # --- NEW (إضافة المستخدم الحالي) ---
         super().__init__()
         self.db = db
         self.patient_mgr = patient_mgr
+        self.current_user = current_user  # --- NEW (تخزين المستخدم الحالي) ---
         self.setup_ui()
         
     def setup_ui(self):
@@ -158,39 +159,57 @@ class CigarettesWidget(QWidget):
             msg_box.setDefaultButton(QMessageBox.StandardButton.No)
             
             if msg_box.exec() == QMessageBox.StandardButton.Yes:
-                # Update the price
-                query = '''
-                    UPDATE settings 
-                    SET setting_value = ?, updated_at = ?
-                    WHERE setting_key = 'cigarette_pack_price'
-                '''
-                self.db.execute(query, (str(new_price), datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-                
-                # Log the price change
-                self.log_price_change(old_price, new_price, affected_count, daily_difference)
-                
-                QMessageBox.information(self, 'نجح', 'تم حفظ السعر بنجاح وتسجيل التغيير')
-                self.load_cigarettes_data()
+                # --- FIX (تحديث السعر داخل transaction آمنة وتسجيل في audit_log) ---
+                try:
+                    # Begin transaction
+                    # Update the price
+                    query = '''
+                        UPDATE settings 
+                        SET setting_value = ?, updated_at = ?
+                        WHERE setting_key = 'cigarette_pack_price'
+                    '''
+                    self.db.execute(query, (str(new_price), datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                    
+                    # Log the price change to audit_log
+                    self.log_price_change(old_price, new_price, affected_count, daily_difference)
+                    
+                    self.db.conn.commit()
+                    QMessageBox.information(self, 'نجح', 'تم حفظ السعر بنجاح وتسجيل التغيير')
+                    self.load_cigarettes_data()
+                except Exception as e:
+                    self.db.conn.rollback()
+                    QMessageBox.critical(self, 'خطأ', f'حدث خطأ أثناء حفظ السعر:\n{str(e)}')
             
         except ValueError:
             QMessageBox.warning(self, 'خطأ', 'الرجاء إدخال سعر صحيح')
     
     def log_price_change(self, old_price, new_price, affected_patients, daily_difference):
-        # --- NEW FEATURE: Log price changes ---
+        # --- FIX (تسجيل تغيير السعر في audit_log بدلاً من ملف نصي) ---
         try:
-            log_file = 'cigarette_price_log.txt'
-            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            user_id = self.current_user.get('id') if self.current_user else None
+            username = self.current_user.get('username') if self.current_user else 'غير معروف'
             
-            with open(log_file, 'a', encoding='utf-8') as f:
-                f.write(f'\n=== تغيير سعر السجائر - {timestamp} ===\n')
-                f.write(f'السعر القديم: {old_price:.2f} جنيه\n')
-                f.write(f'السعر الجديد: {new_price:.2f} جنيه\n')
-                f.write(f'الفرق: {(new_price - old_price):+.2f} جنيه\n')
-                f.write(f'عدد المرضى المتأثرين: {affected_patients}\n')
-                f.write(f'الفرق في التكلفة اليومية: {daily_difference:+.2f} جنيه\n')
-                f.write('=' * 60 + '\n')
+            action_description = f'تغيير سعر علبة السجائر من {old_price:.2f} إلى {new_price:.2f} جنيه. الفرق في التكلفة اليومية: {daily_difference:+.2f} جنيه'
+            
+            query = '''
+                INSERT INTO audit_log (
+                    user_id, username, action_type, action_description, 
+                    old_value, new_value, affected_count, created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            '''
+            self.db.execute(query, (
+                user_id,
+                username,
+                'تغيير سعر السجائر',
+                action_description,
+                str(old_price),
+                str(new_price),
+                affected_patients,
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            ))
         except Exception as e:
-            print(f'فشل تسجيل تغيير السعر: {str(e)}')
+            print(f'فشل تسجيل تغيير السعر في audit_log: {str(e)}')
     
     def load_cigarettes_data(self):
         query = '''

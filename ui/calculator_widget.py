@@ -53,34 +53,68 @@ class CalculatorWidget(QWidget):
         buttons_layout = QGridLayout()
         buttons_layout.setSpacing(8)
         
-        # --- NEW FEATURE: New button layout as requested ---
+        # --- FIX (إصلاح الآلة الحاسبة - إضافة أزرار العمليات الحسابية) ---
         buttons = [
-            ['7', '8', '9'],
-            ['4', '5', '6'],
-            ['1', '2', '3'],
-            ['0', '.', '=']
+            ['7', '8', '9', '÷'],
+            ['4', '5', '6', '×'],
+            ['1', '2', '3', '-'],
+            ['0', '.', '=', '+'],
+            ['C', '', '', '']
         ]
         
         for row_idx, row in enumerate(buttons):
             for col_idx, button_text in enumerate(row):
+                if button_text == '':
+                    continue
+                    
                 btn = QPushButton(button_text)
                 btn.setFont(QFont('Arial', 16, QFont.Weight.Bold))
                 btn.setMinimumHeight(60)
                 
-                # --- NEW FEATURE: Simplified button styling ---
+                # --- FIX (تنسيق الأزرار) ---
                 if button_text == '=':
                     btn.setStyleSheet('''
                         QPushButton {
-                            background-color: #667eea;
+                            background-color: #1abc9c;
                             color: white;
                             border-radius: 8px;
                             border: none;
                         }
                         QPushButton:hover {
-                            background-color: #5568d3;
+                            background-color: #16a085;
                         }
                         QPushButton:pressed {
-                            background-color: #4453c8;
+                            background-color: #138d75;
+                        }
+                    ''')
+                elif button_text in ['÷', '×', '-', '+']:
+                    btn.setStyleSheet('''
+                        QPushButton {
+                            background-color: #e67e22;
+                            color: white;
+                            border-radius: 8px;
+                            border: none;
+                        }
+                        QPushButton:hover {
+                            background-color: #d35400;
+                        }
+                        QPushButton:pressed {
+                            background-color: #a04000;
+                        }
+                    ''')
+                elif button_text == 'C':
+                    btn.setStyleSheet('''
+                        QPushButton {
+                            background-color: #e74c3c;
+                            color: white;
+                            border-radius: 8px;
+                            border: none;
+                        }
+                        QPushButton:hover {
+                            background-color: #c0392b;
+                        }
+                        QPushButton:pressed {
+                            background-color: #a93226;
                         }
                     ''')
                 else:
@@ -106,11 +140,15 @@ class CalculatorWidget(QWidget):
         self.setLayout(layout)
     
     def button_clicked(self, button_text):
+        # --- FIX (معالجة رمز القسمة ÷) ---
         if button_text.isdigit():
             self.handle_digit(button_text)
         elif button_text == '.':
             self.handle_decimal()
-        elif button_text in ['/', '×', '-', '+']:
+        elif button_text in ['/', '÷', '×', '-', '+']:
+            # Convert ÷ to / for internal processing
+            if button_text == '÷':
+                button_text = '/'
             self.handle_operation(button_text)
         elif button_text == '=':
             self.handle_equals()

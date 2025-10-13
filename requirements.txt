@@ -13,4 +13,5 @@ python-docx==1.1.0
 python-docx
 openpyxl
 pandas
-python-docx
+beautifulsoup4
+beautifulsoup4

@@ -128,7 +128,7 @@ class MainWindow(QMainWindow):
         self.payments_widget = PaymentsWidget(self.db, self.payment_mgr, self.patient_mgr, self.current_user)
         self.expenses_widget = ExpensesWidget(self.db, self.expense_mgr, self.current_user)
         self.employees_widget = EmployeesWidget(self.db, self.employee_mgr, self.current_user)
-        self.cigarettes_widget = CigarettesWidget(self.db, self.patient_mgr)
+        self.cigarettes_widget = CigarettesWidget(self.db, self.patient_mgr, self.current_user)  # --- FIX (تمرير المستخدم الحالي) ---
         self.import_patients_widget = ImportPatientsWidget(self.db, self.patient_mgr)  # --- NEW FEATURE ---
         self.text_editor_widget = TextEditorWidget()  # --- NEW FEATURE ---
         self.calculator_widget = CalculatorWidget()
@@ -208,7 +208,7 @@ class MainWindow(QMainWindow):
         layout.addStretch()
         
         exit_btn = QPushButton('🚪 خروج')
-        exit_btn.clicked.connect(self.close)
+        exit_btn.clicked.connect(self.logout)  # --- FIX (تعديل زر الخروج ليعود للتسجيل) ---
         layout.addWidget(exit_btn)
         
         sidebar.setLayout(layout)
@@ -437,6 +437,38 @@ class MainWindow(QMainWindow):
         else:
             self.showFullScreen()
             self.is_fullscreen = True
+    
+    def logout(self):
+        # --- NEW (تسجيل الخروج والعودة لصفحة التسجيل) ---
+        try:
+            # Log logout to audit_log
+            if self.current_user:
+                user_id = self.current_user.get('id')
+                username = self.current_user.get('username')
+                
+                query = '''
+                    INSERT INTO audit_log (
+                        user_id, username, action_type, action_description, created_at
+                    )
+                    VALUES (?, ?, ?, ?, ?)
+                '''
+                self.db.execute(query, (
+                    user_id,
+                    username,
+                    'تسجيل خروج',
+                    f'قام المستخدم {username} بتسجيل الخروج',
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                ))
+        except Exception as e:
+            print(f'فشل تسجيل الخروج في audit_log: {str(e)}')
+        
+        # Close main window and show login
+        app = QApplication.instance()
+        if hasattr(app, 'show_login'):
+            self.hide()
+            app.login_window.show()
+        else:
+            self.close()
     
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() == Qt.Key.Key_F11:
